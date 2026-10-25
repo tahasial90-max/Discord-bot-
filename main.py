@@ -1,5 +1,6 @@
 import os
 import io
+import time
 import discord
 from discord import app_commands
 from google import genai
@@ -34,15 +35,23 @@ async def script(interaction: discord.Interaction, image: discord.Attachment):
         image_bytes = await image.read()
         pil_image = Image.open(io.BytesIO(image_bytes))
 
-        # OCR mit Gemini durchführen, um den Code zu extrahieren
+        # OCR mit Gemini durchführen (mit kurzem Retry bei Server-Auslastung)
         prompt = "Extrahiere den gesamten Luau-Code aus diesem Bild. Gib nur den reinen Code zurück, ohne Markdown-Code-Blöcke oder zusätzlichen Text."
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
         
-            
-            contents=[pil_image, prompt]
-        )
-        
+        response = None
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model='gemini-3.8-flash',
+                    contents=[pil_image, prompt]
+                )
+                break
+            except Exception as api_err:
+                if "503" in str(api_err) and attempt < 2:
+                    time.sleep(2) # 2 Sekunden warten und nochmal versuchen
+                    continue
+                raise api_err
+
         extracted_code = response.text.strip()
 
         # Bereinige eventuelle Markdown-Code-Blöcke, falls Gemini welche mitsendet
