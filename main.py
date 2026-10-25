@@ -21,7 +21,7 @@ async def on_ready():
     await tree.sync()
     print(f"Eingeloggt als {client_discord.user}!")
 
-# Verbesserte OCR-Funktion mit stärkerem Retry bei hoher Auslastung
+# OCR-Funktion mit stabilem Retry
 async def process_ocr(image: discord.Attachment):
     image_bytes = await image.read()
     pil_image = Image.open(io.BytesIO(image_bytes))
@@ -29,7 +29,6 @@ async def process_ocr(image: discord.Attachment):
     prompt = "Extrahiere den gesamten Luau-Code aus diesem Bild. Gib nur den reinen Code zurück, ohne Markdown-Code-Blöcke oder zusätzlichen Text."
     
     response = None
-    # Bis zu 5 Versuche mit ansteigender Wartezeit (2s, 4s, 6s, 8s)
     for attempt in range(5):
         try:
             response = client.models.generate_content(
@@ -51,7 +50,7 @@ async def process_ocr(image: discord.Attachment):
         extracted_code = rrsplit(extracted_code, "```", 1)[0]
     return extracted_code.strip()
 
-# 1. Befehl: /script (Pastefy Link)
+# 1. Befehl: /script
 @tree.command(name="script", description="Konvertiert ein Bild in einen Pastefy-Loadstring-Link.")
 @app_commands.describe(image="Lade das Bild deines Luau-Skripts hoch")
 async def script(interaction: discord.Interaction, image: discord.Attachment):
@@ -72,11 +71,11 @@ async def script(interaction: discord.Interaction, image: discord.Attachment):
             loadstring_code = f'loadstring(game:HttpGet("{raw_url}"))()'
             await interaction.followup.send(f"**Dein Loadstring-Link:**\n```{loadstring_code}```")
         else:
-            await interaction.followup.send("Fehler beim Hochladen des Codes auf Pastefy.")
+            await interaction.followup.send(f"Fehler beim Hochladen auf Pastefy (Code: {res.status_code})")
     except Exception as e:
         await interaction.followup.send(f"Ein Fehler ist aufgetreten: `{str(e)}`")
 
-# 2. Befehl: /file (.lua Datei)
+# 2. Befehl: /file
 @tree.command(name="file", description="Konvertiert ein Bild direkt in eine .lua Datei.")
 @app_commands.describe(image="Lade das Bild deines Luau-Skripts hoch")
 async def file_command(interaction: discord.Interaction, image: discord.Attachment):
