@@ -3,7 +3,6 @@ import io
 import discord
 from discord import app_commands
 from google import genai
-import requests
 from PIL import Image
 
 # 1. API-Schlüssel aus den Umgebungsvariablen laden
@@ -24,10 +23,10 @@ async def on_ready():
     print(f"Eingeloggt als {client_discord.user}!")
 
 # 4. Der /script Befehl
-@tree.command(name="script", description="Konvertiert ein Luau-Skript-Bild in einen Pastefy-Link.")
+@tree.command(name="script", description="Konvertiert ein Luau-Skript-Bild in eine .lua Datei.")
 @app_commands.describe(image="Lade das Bild deines Luau-Skripts hoch")
 async def script(interaction: discord.Interaction, image: discord.Attachment):
-    # Sofortige Rückmeldung, da OCR & Upload einen Moment dauern können
+    # Sofortige Rückmeldung, da OCR einen Moment dauern kann
     await interaction.response.defer(thinking=True)
 
     try:
@@ -38,9 +37,7 @@ async def script(interaction: discord.Interaction, image: discord.Attachment):
         # OCR mit Gemini durchführen, um den Code zu extrahieren
         prompt = "Extrahiere den gesamten Luau-Code aus diesem Bild. Gib nur den reinen Code zurück, ohne Markdown-Code-Blöcke oder zusätzlichen Text."
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            
-            
+            model='gemini-3.8-flash',
             contents=[pil_image, prompt]
         )
         
@@ -53,24 +50,15 @@ async def script(interaction: discord.Interaction, image: discord.Attachment):
             extracted_code = rrsplit(extracted_code, "```", 1)[0]
         extracted_code = extracted_code.strip()
 
-        # Auf Pastefy hochladen
-        pastefy_url = "[https://pastefy.app/api/v2/raw](https://pastefy.app/api/v2/raw)"
-        payload = {
-            "content": extracted_code,
-            "title": "Luau Script from OCR",
-            "privacy": "public"
-        }
-        res = requests.post(pastefy_url, json=payload)
+        # Code als virtuelle .lua-Datei im Arbeitsspeicher erstellen
+        file_bytes = io.BytesIO(extracted_code.encode('utf-8'))
+        discord_file = discord.File(file_bytes, filename="script.lua")
 
-        if res.status_code == 200 or res.status_code == 201:
-            raw_url = res.text.strip()
-            # Falls Pastefy eine JSON zurückgibt, URL extrahieren (je nach API-Antwort)
-            # Standardmäßig liefert /raw den direkten Textlink zurück.
-            loadstring_code = f'loadstring(game:HttpGet("{raw_url}"))()'
-            
-            await interaction.followup.send(f"**Dein Loadstring-Link:**\n```{loadstring_code}```")
-        else:
-            await interaction.followup.send("Fehler beim Hochladen des Codes auf Pastefy.")
+        # Sende die Datei direkt als Antwort in den Chat
+        await interaction.followup.send(
+            "Hier ist dein extrahiertes Luau-Skript als Datei:", 
+            file=discord_file
+        )
 
     except Exception as e:
         await interaction.followup.send(f"Ein Fehler ist aufgetreten: `{str(e)}`")
