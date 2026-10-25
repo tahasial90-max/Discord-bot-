@@ -37,7 +37,8 @@ async def script(interaction: discord.Interaction, image: discord.Attachment):
         # OCR mit Gemini durchführen, um den Code zu extrahieren
         prompt = "Extrahiere den gesamten Luau-Code aus diesem Bild. Gib nur den reinen Code zurück, ohne Markdown-Code-Blöcke oder zusätzlichen Text."
         response = client.models.generate_content(
-            model='gemini-3.8-flash',
+            model='gemini-1.5-flash',
+            
             contents=[pil_image, prompt]
         )
         
