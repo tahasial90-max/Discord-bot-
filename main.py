@@ -26,7 +26,7 @@ async def on_ready():
 # 4. Der /script Befehl
 @tree.command(name="script", description="Konvertiert ein Luau-Skript-Bild in einen Pastefy-Link.")
 @app_commands.describe(image="Lade das Bild deines Luau-Skripts hoch")
-async def script(interaction: discord.Interaction, image: discord.attachment):
+async def script(interaction: discord.Interaction, image: discord.Attachment):
     # Sofortige Rückmeldung, da OCR & Upload einen Moment dauern können
     await interaction.response.defer(thinking=True)
 
